@@ -1,0 +1,71 @@
+/* Mêmes couleurs que l'app iPhone (draze-modele-ios, src/theme.ts) : la model
+   passe de l'une à l'autre, rien ne doit changer de ton en route. */
+:root {
+  --fond: #0b0b0c;
+  --surface: #151517;
+  --ligne: #2e2e33;
+  --texte: #f2f2f0;
+  --discret: #9a9aa0;
+  --rouge: #ff453a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px 24px;
+  background: var(--fond);
+  color: var(--texte);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  text-align: center;
+  /* Rien à sélectionner ici, et le fond sert de zone de déplacement de la
+     fenêtre sur macOS, où la barre de titre est très fine. */
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.marque {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.consigne, .detail { color: var(--discret); max-width: 58ch; margin: 0; }
+.titre { font-size: 20px; font-weight: 600; margin: 0; }
+
+textarea, button { -webkit-app-region: no-drag; font: inherit; }
+
+textarea {
+  width: min(100%, 460px);
+  height: 92px;
+  resize: none;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ligne);
+  background: var(--surface);
+  color: var(--texte);
+  user-select: text;
+}
+textarea:focus { outline: none; border-color: var(--discret); }
+
+.boutons { display: flex; gap: 10px; -webkit-app-region: no-drag; }
+
+button {
+  padding: 11px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--ligne);
+  background: var(--surface);
+  color: var(--texte);
+  cursor: pointer;
+}
+button.principal { background: var(--texte); color: var(--fond); border-color: var(--texte); }
+button:disabled { opacity: 0.45; cursor: default; }
+
+.refus { color: var(--rouge); min-height: 1.4em; margin: 0; }

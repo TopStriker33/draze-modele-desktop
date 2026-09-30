@@ -1,0 +1,110 @@
+# Construit, signe et notarie l'app macOS. Tourne sur un Mac loué par GitHub :
+# une app macOS ne peut être signée que depuis macOS, et il n'y en a pas ici.
+#
+# Les cinq secrets à poser dans Settings → Secrets → Actions (voir
+# deploy/certificat-apple.md) :
+#   MAC_CERT_P12       certificat Developer ID, en base64
+#   MAC_CERT_PASSWORD  le mot de passe du .p12
+#   APPLE_ID           l'Apple ID du compte développeur
+#   APPLE_APP_PASSWORD mot de passe d'application (pas le mot de passe du compte)
+#   APPLE_TEAM_ID      l'identifiant d'équipe (developer.apple.com → Membership)
+name: App Mac
+
+on:
+  workflow_dispatch:
+    inputs:
+      notariser:
+        description: "Notarier chez Apple (décoche pour un essai sans APPLE_APP_PASSWORD)"
+        type: boolean
+        default: true
+  push:
+    tags: ["v*"]
+
+jobs:
+  construire:
+    runs-on: macos-14
+    # Les machines macOS sont facturees ~10x les autres, et la notarisation
+    # est la seule etape qui peut pendre sans rien dire. Le 30-09, un job a
+    # tourne 234 min avant d'echouer sur une coupure reseau vers Apple : a ce
+    # tarif, une seule panne vide le quota du mois et GitHub refuse ensuite de
+    # demarrer le moindre job. Une notarisation saine prend ~15 min ; 60 borne
+    # la casse sans gener un cas normal.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # Les mêmes vérifications qu'en local : un build signé ne rattrape pas
+      # un protocole cassé.
+      - run: npm test
+      - run: npm run typecheck
+
+      # Compile le TypeScript vers dist/ et copie les écrans locaux. electron-builder
+      # ne compile rien : sans cette étape il empaquette un dossier sans dist/main.js
+      # et s'arrête sur « Application entry file does not exist ». En local les
+      # scripts pack:* font ce build ; ici l'appel à electron-builder est direct.
+      - run: npm run build
+      - name: Vérifier que la compilation a produit le point d'entrée
+        run: test -f dist/main.js && test -f dist/preload.js && test -f dist/ui/entree.html
+
+      # Un essai sans notarisation valide la chaîne (certificat, signature, CI)
+      # sans le mot de passe d'application Apple. L'app produite s'ouvre alors
+      # sur le Mac de la model au prix d'un clic droit → Ouvrir, et ne sait
+      # pas se mettre à jour : c'est un essai, pas une livraison.
+      - name: Construire, signer, notarier
+        run: npx electron-builder --mac --publish never ${{ (github.event_name == 'workflow_dispatch' && !inputs.notariser) && '-c.mac.notarize=false' || '' }}
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Dit a quelle soumission Apple on en est, et combien il en reste.
+          # Sans ca, les quatre paquets (dmg + zip, arm64 + x64) partent chez
+          # Apple sans une ligne de log : impossible de distinguer « la file
+          # d'Apple est lente » de « c'est bloque ».
+          DEBUG: "electron-builder,electron-notarize*,@electron/notarize*"
+
+      # La preuve que la signature ET la notarisation ont pris : sans elles,
+      # macOS refuse l'app chez la model et on ne l'apprend qu'à ce moment-là.
+      - name: Vérifier la signature
+        run: |
+          APP="release/mac-arm64/Draze.app"
+          [ -d "$APP" ] || APP="release/mac/Draze.app"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv --verbose=4 "$APP" 2>&1 | tee /tmp/sig.txt
+          grep -q "Authority=Developer ID Application" /tmp/sig.txt
+
+          # Le hardened runtime est exige par la notarisation, et c'est lui qui
+          # rend les entitlements opposables : sans ce drapeau, les lignes
+          # camera/micro du plist ne valent rien.
+          grep -qE "flags=.*runtime" /tmp/sig.txt
+
+          # La permission camera est attachee a la signature. Si l'entitlement
+          # saute, l'app se lance tres bien et c'est en plein appel que la model
+          # decouvre que macOS lui refuse la camera. On le verifie ici.
+          codesign -d --entitlements :- "$APP" 2>/dev/null | tee /tmp/ent.txt
+          grep -q "com.apple.security.device.camera" /tmp/ent.txt
+          grep -q "com.apple.security.device.audio-input" /tmp/ent.txt
+
+      - name: Vérifier le tampon Apple
+        if: github.event_name != 'workflow_dispatch' || inputs.notariser
+        run: |
+          spctl --assess --type execute --verbose=4 "$APP"
+          xcrun stapler validate "$APP"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: draze-mac
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.blockmap
+            release/latest-mac.yml

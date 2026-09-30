@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8" />
+<!-- Écran « colle ton lien » : première ouverture, ou session expirée/révoquée.
+     Le lien arrive sur WhatsApp et ne s'ouvre pas tout seul dans l'app : la
+     model le copie, puis le colle ici. Même parcours que sur l'iPhone. -->
+<title>Draze</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self';" />
+<link rel="stylesheet" href="commun.css" />
+<h1 class="marque">draze</h1>
+<p class="consigne">Copie le lien d’accès qu’on t’a envoyé, puis colle-le ici.</p>
+<textarea id="saisie" placeholder="https://…" spellcheck="false" autofocus></textarea>
+<p class="refus" id="refus"></p>
+<div class="boutons">
+  <button type="button" id="coller">Coller</button>
+  <button type="button" class="principal" id="ouvrir">Ouvrir mon espace</button>
+</div>
+<script src="entree.js"></script>

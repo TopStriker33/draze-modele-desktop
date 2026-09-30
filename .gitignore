@@ -1,0 +1,15 @@
+node_modules/
+dist/
+release/
+*.p12
+*.cer
+*.certSigningRequest
+.env
+verif-*.png
+*.key
+*.csr
+*.pem
+*.base64
+*.log
+.mdp-p12
+github-secrets.txt

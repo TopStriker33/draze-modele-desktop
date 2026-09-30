@@ -1,0 +1,27 @@
+{
+  "name": "draze-modele-desktop",
+  "productName": "Draze",
+  "version": "1.0.0",
+  "description": "Espace model de Draze, en application de bureau",
+  "main": "dist/main.js",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copier-ui.mjs",
+    "start": "npm run build && electron .",
+    "test": "node --experimental-strip-types --no-warnings --test src/lien.test.ts src/messageNatif.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify": "npm test && npm run typecheck && npm run build && electron . --verif",
+    "pack:mac": "npm run build && electron-builder --mac --publish never",
+    "pack:win": "npm run build && electron-builder --win --publish never",
+    "verif:lancement": "npm run build && electron . --verif"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "~5.7.2"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  }
+}

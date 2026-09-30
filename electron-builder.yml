@@ -1,0 +1,52 @@
+appId: ch.draze.modele.bureau
+productName: Draze
+copyright: Draze
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - package.json
+
+# Le feed de mise à jour. Le même domaine que l'espace model : un seul nom à
+# retenir, un seul certificat TLS, et rien de nouveau à ouvrir sur le serveur.
+publish:
+  provider: generic
+  url: https://modele.37-27-96-252.sslip.io/bureau/
+  channel: latest
+
+mac:
+  category: public.app-category.social-networking
+  icon: assets/icon.png
+  # Obligatoire pour la notarisation Apple. Sans les entitlements ci-dessous,
+  # une app en hardened runtime se voit refuser la caméra en silence.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: true
+  # zip en plus du dmg : c'est le format que lit l'auto-update sur macOS.
+  # Sans lui, la mise à jour ne trouve rien à télécharger.
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  extendInfo:
+    # Le texte qu'Apple affiche à la model quand elle accorde la caméra.
+    NSCameraUsageDescription: Draze utilise ta caméra pendant tes appels.
+    NSMicrophoneUsageDescription: Draze utilise ton micro pendant tes appels.
+
+win:
+  icon: assets/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  deleteAppDataOnUninstall: false
