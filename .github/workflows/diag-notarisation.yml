@@ -1,0 +1,48 @@
+# Demande a Apple l'etat des dossiers de notarisation deja envoyes.
+#
+# Pourquoi ce workflow existe : `notarytool submit --wait` n'ecrit rien tant
+# qu'Apple n'a pas repondu. Quand il pend, on ne sait pas distinguer « Apple
+# reflechit » de « Apple a refuse et le message est reste coince ». Cette
+# interrogation, elle, repond en quelques secondes.
+name: Diag notarisation
+
+on:
+  workflow_dispatch:
+    inputs:
+      dossier:
+        description: "Numero de dossier a inspecter (vide = juste l'historique)"
+        type: string
+        default: ""
+
+jobs:
+  diag:
+    runs-on: macos-14
+    timeout-minutes: 10
+    steps:
+      - name: Historique des envois
+        run: |
+          xcrun notarytool history \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Detail d'un dossier
+        if: inputs.dossier != ''
+        run: |
+          xcrun notarytool info "${{ inputs.dossier }}" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+          # Le journal dit POURQUOI un dossier est Invalid, ligne par ligne.
+          xcrun notarytool log "${{ inputs.dossier }}" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" || true
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
